@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation=" 
+          http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
+          http://www.springframework.org/schema/tx
+          http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+          http://www.springframework.org/schema/context
+          http://www.springframework.org/schema/context/spring-context-3.0.xsd
+          http://www.springframework.org/schema/aop
+          http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+
+	<bean id="parentYeGuoDataSource" class="org.apache.commons.dbcp.BasicDataSource"
+		destroy-method="close">
+		<property name="initialSize" value="50" />
+		<property name="maxActive" value="300" />
+		<property name="maxIdle" value="30" />
+		<property name="minIdle" value="5" />
+		<property name="maxWait" value="30000" />
+		<property name="validationQuery" value="SELECT 1" />
+	</bean>
+
+	<bean id="daoYeGuoDataSource_write" parent="parentYeGuoDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url"
+			value="jdbc:mysql://10.10.10.112:3306/2015banner?useUnicode=true&amp;characterEncoding=utf-8" />
+		<property name="username" value="uplus_activity" />
+		<property name="password" value="fRD30eJ1lVbb" />
+	</bean>
+
+	<bean id="daoYeGuoDataSource_read" parent="parentYeGuoDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url"
+			value="jdbc:mysql://10.10.10.112:3306/2015banner?useUnicode=true&amp;characterEncoding=utf-8" />
+		<property name="username" value="uplus_activity" />
+		<property name="password" value="fRD30eJ1lVbb" />
+	</bean>
+
+	<bean id="daoYeGuoDataSource" class="com.yeguo.server.base.DynamicDataSource">
+		<property name="targetDataSources">
+			<map key-type="java.lang.String">
+				<entry key="dataSource_write" value-ref="daoYeGuoDataSource_write"></entry>
+				<entry key="dataSource_read" value-ref="daoYeGuoDataSource_read"></entry>
+			</map>
+		</property>
+		<property name="defaultTargetDataSource" ref="daoYeGuoDataSource_write"></property>
+	</bean>
+
+	<bean id="jdbcTemplate" class="com.yeguo.server.base.JdbcTemplateWrapper">
+		<constructor-arg name="dataSource" ref="daoYeGuoDataSource" />
+	</bean>
+
+	<!-- 事务 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="daoYeGuoDataSource"></property>
+	</bean>
+	<!-- 事务方法定义 -->
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="*" propagation="REQUIRED" isolation="READ_COMMITTED" />
+		</tx:attributes>
+	</tx:advice>
+	<!-- 定义AOP配置 -->
+	<aop:config>
+		<aop:pointcut id="txServiceOperation"
+			expression="(execution(* com.yeguo.server.service.impl.ActivityServiceImpl.publishContent(..)))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="txServiceOperation"
+			order="10" />
+	</aop:config>
+
+</beans> 
